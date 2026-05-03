@@ -1,0 +1,64 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.pyre/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Build and packaging artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Logs and local runtime files
+*.log
+logs/
+*.pid
+
+# Docker Compose persistent data
+/docker/postgres/
+/docker/minio/
+/docker/etcd/
+/docker/milvus-minio/
+/docker/milvus/
+
+# Test and conversion temporary files
+.pytest-tmp/
+pytest-of-*/
+*-pdf/
+*.tmp
+
+# Local database and generated files
+*.sqlite
+*.sqlite3
+/tmp/
+/temp/
+
+# IDE and editor settings
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Local Claude/agent state
+.claude/
