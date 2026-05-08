@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-
+from functools import lru_cache
 load_dotenv()
 
 class Config:
@@ -19,3 +19,8 @@ class Config:
     CHUNK_OVERLAP = 200
     TOP_K = 10
     RERANK_TOP_N = 5
+    
+    
+@lru_cache
+def get_settings() -> Config:
+    return Config() 

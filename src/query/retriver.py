@@ -16,6 +16,7 @@ class Retriever:
         return self.vector_retriever.retrieve(query)
 
     def hybrid_search(self, query: str):
+        """混合检索"""
         query_fusion_retriever = QueryFusionRetriever(
             [self.vector_retriever],
             similarity_top_k=Config.TOP_K,
