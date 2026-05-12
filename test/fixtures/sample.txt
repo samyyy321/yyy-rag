@@ -1,0 +1,3 @@
+Offline indexing test document.
+
+Milvus stores the chunks and vectors generated from this document.

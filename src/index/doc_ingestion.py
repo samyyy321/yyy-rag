@@ -50,7 +50,7 @@ async def _parse_with_mineru(file_path: str, file_name: str) -> str | None:
     """尝试用 MinerU 解析文档，失败则返回 None。"""
     try:
         from src.index.mineru_client import parse_document
-        md_text = await parse_document(file_path, file_name)
+        md_text = await parse_document(file_path)
         if md_text and len(md_text.strip()) > 10:
             logger.info(f"MinerU 解析成功: {file_name} ({len(md_text)} chars)")
             return md_text
@@ -146,11 +146,16 @@ async def ingest_file(
     if not texts:
         return 0
 
-    batch_size = 50
+    batch_size = 20
     all_data = []
 
     for i in range(0, len(texts), batch_size):
         batch_texts = texts[i:i + batch_size]
+        logger.info(
+        f"Embedding: batch={i // batch_size + 1}, "
+        f"size={len(batch_texts)}, "
+        f"type={type(batch_texts[0]).__name__}"
+    )
         embeddings = await embedding_model.aembed_documents(batch_texts)
 
         for j, (text_content, emb) in enumerate(zip(batch_texts, embeddings)):
