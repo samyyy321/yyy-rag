@@ -39,6 +39,8 @@ logs/
 /docker/etcd/
 /docker/milvus-minio/
 /docker/milvus/
+/docker/neo4j_data/
+
 
 # Test and conversion temporary files
 .pytest-tmp/

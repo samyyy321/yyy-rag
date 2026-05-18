@@ -131,3 +131,28 @@ services:
         condition: service_healthy
     ports:
       - "8000:3000"
+
+    # ----------------------------------------------------------
+  # Neo4j — 图数据库
+  # 存储：医学知识图谱（疾病-症状-药物-科室 关系网络）
+  # Web UI：http://localhost:7474  用户名/密码：neo4j/medical123
+  # ----------------------------------------------------------
+  neo4j:
+    image: neo4j:5.20
+    container_name: yyy-neo4j
+    restart: always
+    environment:
+      NEO4J_AUTH: neo4j/medical123
+      NEO4J_PLUGINS: '["apoc"]'                  # APOC 插件，支持高级图算法
+      NEO4J_dbms_security_procedures_unrestricted: apoc.*
+    volumes:
+      - ./docker/neo4j_data:/data
+      - ./docker/neo4j_logs:/logs
+    ports:
+      - "7474:7474"   # Web UI
+      - "7687:7687"   # Bolt 协议（SDK 连接）
+    healthcheck:
+      test: ["CMD", "neo4j", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
