@@ -1,0 +1,9 @@
+﻿# TruLens 评测与 Dashboard 统一安装在 yyy-rag 环境。
+# 禁止使用 trulens-providers-openai：它要求 openai<2，
+# 与本项目 langchain-openai 所需的 openai>=2.45 冲突。
+trulens-core==2.14.0
+trulens-providers-langchain==2.14.0
+trulens-dashboard==2.14.0
+psycopg[binary]>=3.2,<4
+# 0.20.8 起要求 psutil>=7.2.2，与 Dashboard 的 psutil<6 冲突。
+unstructured==0.18.32
