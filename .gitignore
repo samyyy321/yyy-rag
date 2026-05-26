@@ -1,4 +1,4 @@
-# Environment and secrets
+﻿# Environment and secrets
 .env
 .env.*
 !.env.example
@@ -64,3 +64,5 @@ Thumbs.db
 
 # Local Claude/agent state
 .claude/
+
+

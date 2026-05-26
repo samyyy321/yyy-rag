@@ -1,6 +1,6 @@
 ﻿# TruLens 评测 PostgreSQL 与仪表盘接入任务
 
-关联设计文档：`spec_20260910_171919_TruLens评测PostgreSQL与仪表盘接入.md`
+关联设计文档：`docs/spec/spec_20260910_171919_TruLens评测PostgreSQL与仪表盘接入.md`
 
 ## 任务状态
 
@@ -20,7 +20,7 @@
 
 ## 任务 2：评测持久化与 Dashboard
 
-**文件：** 修改 `test/evaluation/trulens_runner.py`，新增 `test/evaluation/run_trulens_dashboard.py`。
+**文件：** 修改 `src/evaluation/trulens_runner.py`，新增 `RAG-assessment/run_trulens_dashboard.py`。
 
 - [x] 从 `TRULENS_DATABASE_URL` 创建 Session；URL 缺失时回退 SQLite。
 - [x] 记录器使用统一 Session 工厂。
@@ -36,7 +36,7 @@
 
 ## 任务 4：说明与收尾
 
-**文件：** 更新 `test/evaluation/README.md` 与本任务文档。
+**文件：** 更新 `RAG-assessment/README.md` 与本任务文档。
 
 - [x] 说明安装、建库、评测和 Dashboard 命令。
 - [x] 标记每项已完成并写入验证结果。
@@ -58,4 +58,5 @@
 - TruLens 2.x 的 OTel 评分为异步任务。评测请求已确保追踪记录落入 PostgreSQL，但 pytest 不会无限等待历史评分任务完成；Dashboard 中评分列可能在后台任务完成前为空。
 - 本次不迁移历史 `default.sqlite` 数据。
 - 未执行 Git 提交，是否提交由用户决定。
+
 

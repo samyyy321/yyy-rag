@@ -1,4 +1,4 @@
-﻿"""TruLens 评估模块包。
+﻿"""评测测试包。
 
-该目录只承载离线评测逻辑，禁止被生产 `src` 模块导入。
+TruLens 运行时实现位于 `src.evaluation`，执行入口位于 `RAG-assessment`。
 """

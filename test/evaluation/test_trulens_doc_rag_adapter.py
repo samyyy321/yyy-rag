@@ -7,7 +7,7 @@ import json
 import pytest
 from langchain_core.messages import AIMessage
 
-from test.evaluation.trulens_doc_rag_adapter import (
+from src.evaluation.trulens_doc_rag_adapter import (
     DocRagEvaluationAdapter,
     load_evaluation_cases,
 )
@@ -98,7 +98,7 @@ def test_build_trulens_feedbacks_configures_rag_triad() -> None:
     """评估配置必须同时包含检索相关性、回答相关性与事实支撑度。"""
     from langchain_openai import ChatOpenAI
 
-    from test.evaluation.trulens_runner import build_trulens_feedbacks
+    from src.evaluation.trulens_runner import build_trulens_feedbacks
 
     judge_llm = ChatOpenAI(
         model="judge-model",
@@ -129,3 +129,4 @@ def test_load_evaluation_cases_accepts_utf8_bom(tmp_path) -> None:
     cases = load_evaluation_cases(dataset_path)
 
     assert [case.id for case in cases] == ["bom-case"]
+

@@ -15,7 +15,7 @@ from trulens.apps.app import TruApp
 from trulens.core import Metric, Provider, TruSession
 
 from src.core.config import get_settings
-from test.evaluation.trulens_doc_rag_adapter import (
+from src.evaluation.trulens_doc_rag_adapter import (
     DocRagEvaluationAdapter,
     EvaluationCase,
     RagEvaluationRecord,
@@ -286,5 +286,6 @@ async def run_evaluation_case_with_feedback(
     # 这避免 pytest 退出时后台 evaluator 线程尚未完成评分。
     feedback_results = recording.retrieve_feedback_results(timeout=feedback_timeout)
     return result, feedback_results
+
 
 

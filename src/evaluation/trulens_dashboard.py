@@ -1,4 +1,4 @@
-﻿"""在 yyy-rag 主环境中启动连接 PostgreSQL 的 TruLens 仪表盘。"""
+﻿"""TruLens Dashboard 配置与启动命令构造。"""
 
 from __future__ import annotations
 
@@ -8,12 +8,8 @@ import sys
 from collections.abc import Mapping
 from dataclasses import dataclass
 from importlib.resources import files
-from pathlib import Path
-
-from dotenv import load_dotenv
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
 TRULENS_DATABASE_PREFIX = "trulens_"
 
 
@@ -52,7 +48,7 @@ def build_dashboard_command(
     python_executable: str | None = None,
     dashboard_main_path: str | None = None,
 ) -> list[str]:
-    """使用当前 Python 解释器启动 Streamlit，避免错误命中 PATH 中的其他环境。"""
+    """使用当前 Python 解释器启动 Streamlit，避免命中其他环境。"""
     if not options.database_url:
         raise ValueError("缺少 TRULENS_DATABASE_URL，无法启动 PostgreSQL Dashboard")
 
@@ -79,12 +75,6 @@ def build_dashboard_command(
     ]
 
 
-def main() -> int:
-    """加载项目 .env 后，在主环境中启动 TruLens Dashboard。"""
-    load_dotenv(PROJECT_ROOT / ".env")
-    options = get_dashboard_options()
+def start_dashboard(options: DashboardOptions) -> int:
+    """启动 Dashboard 子进程并返回其退出码。"""
     return subprocess.run(build_dashboard_command(options), check=False).returncode
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

@@ -10,11 +10,11 @@ import pytest
 from src.infra.embedding import get_embedding_model
 from src.infra.llm import get_llm
 from src.infra.milvus_client import get_milvus_client
-from test.evaluation.trulens_doc_rag_adapter import (
+from src.evaluation.trulens_doc_rag_adapter import (
     DocRagEvaluationAdapter,
     load_evaluation_cases,
 )
-from test.evaluation.trulens_runner import (
+from src.evaluation.trulens_runner import (
     create_trulens_recorder,
     get_evaluation_llm,
     run_evaluation_case_with_feedback,
@@ -22,7 +22,7 @@ from test.evaluation.trulens_runner import (
 
 
 pytestmark = pytest.mark.integration
-DATASET_PATH = Path(__file__).parents[1] / "evaluation" / "data" / "doc_rag_eval.jsonl"
+DATASET_PATH = Path(__file__).parents[2] / "RAG-assessment" / "data" / "doc_rag_eval.jsonl"
 
 
 def _get_case_limit() -> int:
@@ -79,5 +79,6 @@ async def test_doc_rag_with_trulens() -> None:
         completed.append(case.id)
 
     assert completed, "没有完成任何评测样本"
+
 
 
