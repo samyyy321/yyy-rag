@@ -1,15 +1,19 @@
-# src/agents/knowledge/doc_rag.py
+﻿"""按知识库隔离执行文档检索和 RAG 回答。"""
 
 from __future__ import annotations
+
 from loguru import logger
-from langchain_core.messages import SystemMessage
-from langchain_core.language_models import BaseChatModel
 from langchain_core.embeddings import Embeddings
+from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import SystemMessage
 from pymilvus import MilvusClient
 
+from src.core.config import get_settings
 from src.query.prompts import DOC_QA_PROMPT
 
-COLLECTION_NAME = "knowledge_docs"
+
+settings = get_settings()
+COLLECTION_NAME = settings.MILVUS_COLLECTION_NAME
 
 
 async def search_docs_raw(
@@ -21,31 +25,43 @@ async def search_docs_raw(
     doc_type: str | None = None,
     llm: BaseChatModel | None = None,
     use_hyde: bool = False,
+    knowledge_base_id: str | None = None,
 ) -> list[dict]:
-    """
-    文档向量检索，返回原始检索结果列表。
-    支持 HyDE 增强检索和 Reranker 精排。
-    """
+    """执行向量检索，并可按知识库和文档类型组合过滤。"""
     if use_hyde and llm is not None:
         from src.query.hyde import generate_hyde_embedding
+
         query_vec = await generate_hyde_embedding(question, llm, embedding_model)
     else:
         query_vec = await embedding_model.aembed_query(question)
 
-    search_params = {"metric_type": "COSINE", "params": {"nprobe": 16}}
-    filter_expr = f'doc_type == "{doc_type}"' if doc_type else None
+    filters: list[str] = []
+    if knowledge_base_id:
+        filters.append(f'knowledge_base_id == "{knowledge_base_id}"')
+    if doc_type:
+        filters.append(f'doc_type == "{doc_type}"')
+    filter_expr = " && ".join(filters) if filters else None
 
     try:
         results = milvus_client.search(
             collection_name=COLLECTION_NAME,
             data=[query_vec],
             limit=top_k,
-            output_fields=["doc_name", "doc_type", "page_number", "chunk_index", "text"],
-            search_params=search_params,
+            output_fields=[
+                "knowledge_base_id",
+                "doc_id",
+                "doc_name",
+                "doc_type",
+                "category",
+                "page_number",
+                "chunk_index",
+                "text",
+            ],
+            search_params={"metric_type": "COSINE", "params": {"nprobe": 16}},
             filter=filter_expr,
         )
-    except Exception as e:
-        logger.warning(f"文档检索失败: {e}")
+    except Exception as exc:
+        logger.warning(f"文档检索失败: {exc}")
         return []
 
     if not results or not results[0]:
@@ -55,22 +71,19 @@ async def search_docs_raw(
         {**hit["entity"], "score": hit.get("distance", 0.0)}
         for hit in results[0]
     ]
-
     from src.query.reranker import rerank_docs
-    reranked = await rerank_docs(question, hits, top_k=rerank_top_k)
-    return reranked
+
+    return await rerank_docs(question, hits, top_k=rerank_top_k)
 
 
 def format_doc_context(hits: list[dict]) -> str:
-    """将检索结果格式化为 LLM 可读的上下文字符串。
-       统一格式: 片段1 [文档名, 第X页]: 内容... 。
-    """
+    """将检索结果格式化为 LLM 可读的上下文字符串。"""
     if not hits:
         return ""
     parts = []
-    for i, hit in enumerate(hits, 1):
+    for index, hit in enumerate(hits, 1):
         source = f"[{hit['doc_name']}, 第{hit.get('page_number', '?')}页]"
-        parts.append(f"片段{i} {source}:\n{hit['text']}")
+        parts.append(f"片段{index} {source}:\n{hit['text']}")
     return "\n\n---\n\n".join(parts)
 
 
@@ -84,12 +97,19 @@ async def search_docs(
     doc_type: str | None = None,
     role: str = "patient",
     use_hyde: bool = True,
+    knowledge_base_id: str | None = None,
 ) -> str:
-    """文档 RAG 检索 + Reranker 精排 + HyDE 增强 + 生成回答。"""
+    """执行带知识库过滤的 RAG 检索、重排、增强和回答生成。"""
     hits = await search_docs_raw(
-        question, embedding_model, milvus_client,
-        top_k=top_k, rerank_top_k=rerank_top_k, doc_type=doc_type,
-        llm=llm, use_hyde=use_hyde,
+        question,
+        embedding_model,
+        milvus_client,
+        top_k=top_k,
+        rerank_top_k=rerank_top_k,
+        doc_type=doc_type,
+        llm=llm,
+        use_hyde=use_hyde,
+        knowledge_base_id=knowledge_base_id,
     )
     if not hits:
         return "当前知识库中未找到与您问题相关的文档内容。"
