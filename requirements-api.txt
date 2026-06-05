@@ -1,8 +1,0 @@
-﻿# FastAPI 生产 API 与 PostgreSQL、MinIO 运行依赖。
-fastapi
-uvicorn[standard]
-sqlalchemy>=2.0,<3
-alembic>=1.13,<2
-psycopg[binary]>=3.2,<4
-minio>=7.2,<8
-python-multipart>=0.0.9,<1
