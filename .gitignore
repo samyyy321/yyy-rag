@@ -40,13 +40,18 @@ logs/
 /docker/milvus-minio/
 /docker/milvus/
 /docker/neo4j_data/
-
+/docker/neo4j_logs/
 
 # Test and conversion temporary files
 .pytest-tmp/
+.pytest_tmp/
 pytest-of-*/
+pytest-cache-files-*/
 *-pdf/
 *.tmp
+
+# Optional large local integration fixture
+/2407.21059v1.pdf
 
 # Local database and generated files
 *.sqlite
@@ -64,6 +69,3 @@ Thumbs.db
 
 # Local Claude/agent state
 .claude/
-
-
-

@@ -1,4 +1,4 @@
-﻿# RAG-assessment
+# RAG-assessment
 
 这是项目的独立 RAG 评测入口目录。TruLens 运行时实现位于 `src/evaluation/`，本目录只放评测执行脚本、Dashboard 启动入口和评测数据。
 
@@ -22,7 +22,7 @@ RAG-assessment/
 在项目根目录执行：
 
 ```powershell
-python -m pip install -r requirements-evaluation.txt
+python -m pip install -r requirements.txt
 ```
 
 `.env` 中需要配置：
