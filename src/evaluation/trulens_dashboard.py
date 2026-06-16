@@ -1,4 +1,4 @@
-﻿"""TruLens Dashboard 配置与启动命令构造。"""
+"""TruLens Dashboard 配置与启动命令构造。"""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import subprocess
 import sys
 from collections.abc import Mapping
 from dataclasses import dataclass
-from importlib.resources import files
+from pathlib import Path
 
 
 TRULENS_DATABASE_PREFIX = "trulens_"
@@ -54,7 +54,9 @@ def build_dashboard_command(
 
     interpreter = python_executable or sys.executable
     main_path = dashboard_main_path or str(
-        files("trulens.dashboard").joinpath("main.py")
+        Path(__file__).resolve().parents[2]
+        / "RAG-assessment"
+        / "trulens_dashboard_compat.py"
     )
     return [
         interpreter,

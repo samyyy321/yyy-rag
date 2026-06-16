@@ -69,3 +69,6 @@ Thumbs.db
 
 # Local Claude/agent state
 .claude/
+
+# TruLens Dashboard Windows compatibility runtime files
+.trulens-dashboard-runtime/
