@@ -1,4 +1,4 @@
-﻿# Environment and secrets
+# Environment and secrets
 .env
 .env.*
 !.env.example
@@ -72,3 +72,11 @@ Thumbs.db
 
 # TruLens Dashboard Windows compatibility runtime files
 .trulens-dashboard-runtime/
+# Frontend dependencies, build output and generated Vite files
+/app/node_modules/
+/app/dist/
+/app/coverage/
+/app/.vite/
+/app/*.tsbuildinfo
+/app/vite.config.js
+/app/vite.config.d.ts

@@ -1,6 +1,8 @@
-﻿"""按知识库执行 RAG 问答和基础依赖健康检查。"""
+"""按知识库执行 RAG 问答和基础依赖健康检查。"""
 
 from __future__ import annotations
+
+from collections.abc import AsyncIterator
 
 from uuid import UUID
 
@@ -85,6 +87,50 @@ async def answer_question(
     ]
     return ChatResponse(answer=answer, sources=sources)
 
+
+async def stream_answer(
+    *,
+    knowledge_base_id: UUID,
+    question: str,
+    role: str,
+    top_k: int,
+    rerank_top_k: int,
+    use_hyde: bool,
+    db: Session,
+    embedding_model: Embeddings,
+    milvus_client: MilvusClient,
+    llm: BaseChatModel,
+) -> AsyncIterator[str]:
+    """按模型生成顺序流式返回指定知识库的 RAG 回答文本。"""
+    exists = db.execute(
+        select(KnowledgeBase.id).where(KnowledgeBase.id == knowledge_base_id)
+    ).scalar_one_or_none()
+    if exists is None:
+        raise ResourceNotFoundError("知识库不存在")
+
+    hits = await search_docs_raw(
+        question=question,
+        embedding_model=embedding_model,
+        milvus_client=milvus_client,
+        top_k=top_k,
+        rerank_top_k=rerank_top_k,
+        llm=llm,
+        use_hyde=use_hyde,
+        knowledge_base_id=str(knowledge_base_id),
+    )
+    if not hits:
+        yield "当前知识库中未找到与您问题相关的文档内容。"
+        return
+
+    prompt = DOC_QA_PROMPT.format(
+        question=question,
+        context=format_doc_context(hits),
+        role=role,
+    )
+    async for chunk in llm.astream([SystemMessage(content=prompt)]):
+        content = chunk.content
+        if isinstance(content, str) and content:
+            yield content
 
 def check_health(
     db: Session,

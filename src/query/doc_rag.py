@@ -1,4 +1,4 @@
-﻿"""按知识库隔离执行文档检索和 RAG 回答。"""
+"""按知识库隔离执行文档检索和 RAG 回答。"""
 
 from __future__ import annotations
 
@@ -82,8 +82,8 @@ def format_doc_context(hits: list[dict]) -> str:
         return ""
     parts = []
     for index, hit in enumerate(hits, 1):
-        source = f"[{hit['doc_name']}, 第{hit.get('page_number', '?')}页]"
-        parts.append(f"片段{index} {source}:\n{hit['text']}")
+        # 文档定位信息只供检索链路使用，不传给模型，避免出现在用户回答中。
+        parts.append(f"文档片段{index} 【来源：{hit['doc_name']}】：\n{hit['text']}")
     return "\n\n---\n\n".join(parts)
 
 
