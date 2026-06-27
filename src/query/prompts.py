@@ -20,7 +20,7 @@ QUERY_REWRITE_PROMPT = """你是医学检索查询改写专家。将用户的口
 
 只输出 JSON，不要解释。"""
 
-HYDE_PROMPT = """你是医学知识专家。请根据以下问题，写一段假设性的回答（约100-200字），作为检索的参考文本。
+HYDE_PROMPT = """你是知识专家。请根据以下问题，写一段假设性的回答（约100-200字），作为检索的参考文本。
 不需要完全准确，目的是生成一段与正确答案语义相近的文本，用于提升向量检索的召回率。
 
 问题：{question}
@@ -126,34 +126,35 @@ GRAPH_QA_PROMPT = """你是天宫医疗的知识问答助手。根据知识图�
 
 NL2SQL_PROMPT = """你是 SQL 查询专家。根据用户问题和数据库表结构生成 PostgreSQL 查询。
 
-## 表结构
+表结构
 
-departments（科室）:
-  id, name, created_at
+categories（商品分类）:
+id, name
 
-diseases（疾病）:
-  id, name, department_id(FK→departments), description, cause, cure_way, cured_prob, easy_get, cost_money, created_at
+products（商品）:
+id, name, category_id(FK→categories), price, stock, created_at
 
-symptoms（症状）:
-  id, name, created_at
+customers（客户）:
+id, name, gender, age, created_at
 
-drugs（药品）:
-  id, name, category, is_otc, stock_quantity, price, expire_date, created_at
+orders（订单）:
+id, customer_id(FK→customers), total_amount, status, created_at
 
-consultations（问诊记录）:
-  id, patient_id(FK→patients), department_id(FK→departments), chief_complaint, diagnosis, urgency_level, session_id, created_at
+order_items（订单明细）:
+id, order_id(FK→orders), product_id(FK→products), quantity, price
 
-disease_symptoms（疾病-症状关联）:
-  id, disease_id(FK→diseases), symptom_id(FK→symptoms)
-
-disease_drugs（疾病-药品关联）:
-  id, disease_id(FK→diseases), drug_id(FK→drugs), relation_type('common'/'recommend')
-
-## 安全规则
-1. 只允许 SELECT 语句
-2. 禁止查询 patients 表的 phone、id_card 字段
-3. 必须包含 LIMIT，最大 100
-4. 不要使用子查询嵌套超过 2 层
+安全规则
+只允许 SELECT 语句
+禁止 INSERT、UPDATE、DELETE、DROP、ALTER 等操作
+必须包含 LIMIT，最大为 100
+不要使用复杂的多层嵌套子查询
+查询要求
+根据用户问题选择需要查询的表
+涉及关联关系时使用 JOIN
+只查询回答用户问题所需要的字段
+涉及统计时使用 COUNT、SUM、AVG、MAX、MIN 等聚合函数
+如果需要分组统计，使用 GROUP BY
+如果用户问题无法通过现有表结构回答，返回一个合理的 SELECT 查询
 
 用户问题：{question}
 
