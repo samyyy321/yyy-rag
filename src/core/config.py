@@ -1,4 +1,4 @@
-﻿"""项目运行配置。"""
+"""项目运行配置。"""
 
 import os
 from functools import lru_cache
@@ -36,6 +36,11 @@ class Config:
     MILVUS_HOST: str = os.getenv("MILVUS_HOST", "localhost")
     MILVUS_PORT: int = int(os.getenv("MILVUS_PORT", "19530"))
 
+    # Neo4j：GraphRAG 图谱检索配置。
+    NEO4J_URI: str = os.getenv("NEO4J_URI", "bolt://localhost:7687")
+    NEO4J_USER: str = os.getenv("NEO4J_USER", "neo4j")
+    NEO4J_PASSWORD: str = os.getenv("NEO4J_PASSWORD", "medical123")
+    NEO4J_DATABASE: str = os.getenv("NEO4J_DATABASE", "neo4j")
     CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "512"))
     CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "64"))
     TOP_K = int(os.getenv("TOP_K", "10"))

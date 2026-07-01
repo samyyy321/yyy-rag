@@ -103,6 +103,38 @@ npm run dev
 
 首次运行需要执行 `npm install`。前端开发服务器会将 `/api` 请求代理到后端 API；如需调整代理目标，可复制 `app/.env.example` 为 `app/.env.local` 后修改 `VITE_DEV_API_TARGET`。
 
+
+## 多通道检索与演示数据初始化
+
+Chat 接口支持以下检索通道：
+
+- `document`：当前知识库的 Milvus 文档检索；
+- `graph`：Neo4j 医学知识图谱检索；
+- `sql`：PostgreSQL 运营演示表查询。
+
+不传 `channels` 时默认使用 `document`。传入多个通道时，后端会并行检索成功通道并融合回答：
+
+```json
+{
+  "knowledge_base_id": "知识库 UUID",
+  "question": "演示问题",
+  "channels": ["document", "graph", "sql"]
+}
+```
+
+初始化 NL2SQL 的运营演示表：
+
+```powershell
+conda run --no-capture-output -n yyy-rag python -m scripts.init_operational_tables
+```
+
+初始化 GraphRAG 的 Neo4j 演示图谱：
+
+```powershell
+conda run --no-capture-output -n yyy-rag python -m scripts.init_medical_graph
+```
+
+图谱演示数据位于 `scripts/data/medical_graph_demo.json`。其中的节点、关系和属性仅用于验证 GraphRAG、NL2SQL 与多通道融合流程，**不能作为医疗诊断、处方、治疗或健康建议依据**。
 ## API 总览
 
 | 方法 | 路径 | 说明 |

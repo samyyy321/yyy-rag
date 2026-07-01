@@ -1,0 +1,78 @@
+﻿{
+  "disclaimer": "以下节点和关系仅用于验证 GraphRAG、Neo4j 查询和多通道融合流程，不构成医疗诊断、处方、治疗或健康建议依据。",
+  "nodes": [
+    {
+      "label": "Disease",
+      "name": "演示高血压",
+      "properties": {
+        "description": "用于图谱检索演示的疾病节点。",
+        "demo_only": true
+      }
+    },
+    {
+      "label": "Disease",
+      "name": "演示心血管风险",
+      "properties": {
+        "description": "用于图谱关系演示的疾病节点。",
+        "demo_only": true
+      }
+    },
+    {
+      "label": "Symptom",
+      "name": "演示头晕",
+      "properties": {"demo_only": true}
+    },
+    {
+      "label": "Drug",
+      "name": "演示药物A",
+      "properties": {"demo_only": true}
+    },
+    {
+      "label": "Department",
+      "name": "演示内科",
+      "properties": {"demo_only": true}
+    },
+    {
+      "label": "Check",
+      "name": "演示血压检查",
+      "properties": {"demo_only": true}
+    },
+    {
+      "label": "Food",
+      "name": "演示低盐饮食",
+      "properties": {"demo_only": true}
+    }
+  ],
+  "relationships": [
+    {
+      "from": {"label": "Disease", "name": "演示高血压"},
+      "type": "HAS_SYMPTOM",
+      "to": {"label": "Symptom", "name": "演示头晕"}
+    },
+    {
+      "from": {"label": "Disease", "name": "演示高血压"},
+      "type": "BELONGS_TO",
+      "to": {"label": "Department", "name": "演示内科"}
+    },
+    {
+      "from": {"label": "Disease", "name": "演示高血压"},
+      "type": "COMMON_DRUG",
+      "to": {"label": "Drug", "name": "演示药物A"}
+    },
+    {
+      "from": {"label": "Disease", "name": "演示高血压"},
+      "type": "NEED_CHECK",
+      "to": {"label": "Check", "name": "演示血压检查"}
+    },
+    {
+      "from": {"label": "Disease", "name": "演示高血压"},
+      "type": "DO_EAT",
+      "to": {"label": "Food", "name": "演示低盐饮食"}
+    },
+    {
+      "from": {"label": "Disease", "name": "演示高血压"},
+      "type": "ACOMPANY_WITH",
+      "to": {"label": "Disease", "name": "演示心血管风险"}
+    }
+  ]
+}

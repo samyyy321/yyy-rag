@@ -80,3 +80,6 @@ Thumbs.db
 /app/*.tsbuildinfo
 /app/vite.config.js
 /app/vite.config.d.ts
+# Script runtime logs and optional local demo-data overrides
+/scripts/.run-logs/
+/scripts/data/local/

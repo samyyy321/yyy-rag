@@ -1,4 +1,4 @@
-﻿"""Chat RAG 问答与流式问答路由。"""
+"""Chat RAG 问答与流式问答路由。"""
 
 from __future__ import annotations
 
@@ -36,6 +36,7 @@ async def chat(
         top_k=payload.top_k,
         rerank_top_k=payload.rerank_top_k,
         use_hyde=payload.use_hyde,
+        channels=payload.channels,
         db=db,
         embedding_model=embedding_model,
         milvus_client=milvus_client,
@@ -61,6 +62,7 @@ async def chat_stream(
             top_k=payload.top_k,
             rerank_top_k=payload.rerank_top_k,
             use_hyde=payload.use_hyde,
+        channels=payload.channels,
             db=db,
             embedding_model=embedding_model,
             milvus_client=milvus_client,

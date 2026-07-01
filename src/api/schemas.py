@@ -1,10 +1,12 @@
-﻿"""FastAPI 请求、响应和校验模型。"""
+"""FastAPI 请求、响应和校验模型。"""
 
 from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+RetrievalChannel = Literal["document", "graph", "sql"]
 
 
 class KnowledgeBaseCreate(BaseModel):
@@ -90,12 +92,19 @@ class ChatRequest(BaseModel):
     top_k: int = Field(default=20, gt=0)
     rerank_top_k: int = Field(default=5, gt=0)
     use_hyde: bool = True
+    channels: list[RetrievalChannel] = Field(
+        default_factory=lambda: ["document"],
+        min_length=1,
+        max_length=3,
+    )
 
     @model_validator(mode="after")
     def validate_rerank_limit(self) -> "ChatRequest":
         """保证重排数量不超过粗检索数量。"""
         if self.rerank_top_k > self.top_k:
             raise ValueError("rerank_top_k 不能大于 top_k")
+        if len(set(self.channels)) != len(self.channels):
+            raise ValueError("channels 不能包含重复通道")
         return self
 
 
