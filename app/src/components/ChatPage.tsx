@@ -1,17 +1,9 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { ApiError } from '../api/client';
 import { streamQuestion } from '../api/chat';
-import type { KnowledgeBase } from '../api/types';
-
-export type ChatEntryPanelProps = {
-  knowledgeBase: KnowledgeBase | null;
-  onOpen: () => void;
-};
-
-export type ChatPageProps = {
-  knowledgeBase: KnowledgeBase;
-  onBack: () => void;
-};
+import { listKnowledgeBases } from '../api/knowledgeBases';
+import type { ChatRequest, RetrievalChannel } from '../api/types';
 
 type ChatSettings = {
   role: 'patient' | 'doctor' | 'pharmacist';
@@ -26,6 +18,16 @@ type ChatMessage = {
   content: string;
 };
 
+const CHANNEL_OPTIONS: Array<{
+  value: RetrievalChannel;
+  label: string;
+  description: string;
+}> = [
+  { value: 'document', label: '文档知识库', description: '检索已上传文档' },
+  { value: 'graph', label: '医学知识图谱', description: '查询 Neo4j 演示图谱' },
+  { value: 'sql', label: '运营数据库', description: '查询运营演示数据' },
+];
+
 const DEFAULT_SETTINGS: ChatSettings = {
   role: 'patient',
   topK: 20,
@@ -33,47 +35,59 @@ const DEFAULT_SETTINGS: ChatSettings = {
   useHyde: true,
 };
 
-/** 作为工作台与独立聊天界面之间的问答入口。 */
-export function ChatEntryPanel({ knowledgeBase, onOpen }: ChatEntryPanelProps) {
-  return (
-    <section className="panel chat-entry-panel">
-      <div>
-        <h2>基于此知识库提问</h2>
-        <p>
-          {knowledgeBase
-            ? `在“${knowledgeBase.name}”中检索文档并进行流式问答。`
-            : '请选择知识库后进入聊天。'}
-        </p>
-      </div>
-      <button
-        className="button button-primary"
-        disabled={knowledgeBase === null}
-        type="button"
-        onClick={onOpen}
-      >
-        进入聊天
-      </button>
-    </section>
-  );
-}
-
-/** 展示当前知识库的独立流式问答界面。 */
-export function ChatPage({ knowledgeBase, onBack }: ChatPageProps) {
+/** 提供 document、graph、sql 单通道或融合检索的唯一流式聊天界面。 */
+export function ChatPage() {
   const [question, setQuestion] = useState('');
+  const [channels, setChannels] = useState<RetrievalChannel[]>(['document']);
+  const [knowledgeBaseId, setKnowledgeBaseId] = useState('');
   const [settings, setSettings] = useState<ChatSettings>(DEFAULT_SETTINGS);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
 
-  const canSubmit = question.trim().length > 0 && !isStreaming;
+  const documentSelected = channels.includes('document');
+  const knowledgeBasesQuery = useQuery({
+    queryKey: ['knowledge-bases', { skip: 0, limit: 100 }],
+    queryFn: () => listKnowledgeBases(0, 100),
+    enabled: documentSelected,
+  });
+  const knowledgeBases = knowledgeBasesQuery.data?.items ?? [];
+  const requiresKnowledgeBase = documentSelected && !knowledgeBaseId;
+  const canSubmit =
+    question.trim().length > 0 &&
+    channels.length > 0 &&
+    !requiresKnowledgeBase &&
+    !isStreaming;
+
+  const toggleChannel = (channel: RetrievalChannel) => {
+    const nextChannels = channels.includes(channel)
+      ? channels.filter((item) => item !== channel)
+      : [...channels, channel];
+    setChannels(nextChannels);
+    if (!nextChannels.includes('document')) {
+      setKnowledgeBaseId('');
+    }
+  };
 
   const submitQuestion = async () => {
     const trimmedQuestion = question.trim();
-    if (!trimmedQuestion) {
+    if (!canSubmit || !trimmedQuestion) {
       return;
     }
 
     const answerId = `assistant-${Date.now()}`;
+    const payload: ChatRequest = {
+      channels,
+      question: trimmedQuestion,
+      role: settings.role,
+      top_k: settings.topK,
+      rerank_top_k: settings.rerankTopK,
+      use_hyde: settings.useHyde,
+    };
+    if (documentSelected && knowledgeBaseId) {
+      payload.knowledge_base_id = knowledgeBaseId;
+    }
+
     setErrorMessage(null);
     setQuestion('');
     setMessages((current) => [
@@ -84,25 +98,15 @@ export function ChatPage({ knowledgeBase, onBack }: ChatPageProps) {
     setIsStreaming(true);
 
     try {
-      await streamQuestion(
-        {
-          knowledge_base_id: knowledgeBase.id,
-          question: trimmedQuestion,
-          role: settings.role,
-          top_k: settings.topK,
-          rerank_top_k: settings.rerankTopK,
-          use_hyde: settings.useHyde,
-        },
-        (content) => {
-          setMessages((current) =>
-            current.map((message) =>
-              message.id === answerId
-                ? { ...message, content: `${message.content}${content}` }
-                : message,
-            ),
-          );
-        },
-      );
+      await streamQuestion(payload, (content) => {
+        setMessages((current) =>
+          current.map((message) =>
+            message.id === answerId
+              ? { ...message, content: `${message.content}${content}` }
+              : message,
+          ),
+        );
+      });
     } catch (error) {
       setErrorMessage(getErrorMessage(error));
     } finally {
@@ -113,15 +117,61 @@ export function ChatPage({ knowledgeBase, onBack }: ChatPageProps) {
   return (
     <section className="chat-page">
       <header className="chat-page-header">
-        <div>
-          <button className="back-button" type="button" onClick={onBack}>
-            返回工作台
-          </button>
-          <h2>知识库问答</h2>
-          <p>当前知识库：{knowledgeBase.name}。每次提问会独立检索当前知识库。</p>
-        </div>
+        <h2>统一智能问答</h2>
+        <p>选择一个或多个检索通道，多个通道会由后端并行检索并融合回答。</p>
       </header>
 
+      <fieldset className="channel-selector" disabled={isStreaming}>
+        <legend>检索通道</legend>
+        <div className="channel-options">
+          {CHANNEL_OPTIONS.map((channel) => (
+            <label className="channel-option" key={channel.value}>
+              <input
+                aria-label={channel.label}
+                checked={channels.includes(channel.value)}
+                type="checkbox"
+                onChange={() => toggleChannel(channel.value)}
+              />
+              <span>
+                <strong>{channel.label}</strong>
+                <small>{channel.description}</small>
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      {channels.length === 0 ? (
+        <p className="notice notice-error" role="alert">至少选择一个检索通道。</p>
+      ) : null}
+
+      {documentSelected ? (
+        <section className="knowledge-base-selector">
+          <label>
+            文档知识库
+            <select
+              aria-label="文档知识库选择"
+              disabled={isStreaming || knowledgeBasesQuery.isLoading || knowledgeBases.length === 0}
+              value={knowledgeBaseId}
+              onChange={(event) => setKnowledgeBaseId(event.target.value)}
+            >
+              <option value="">请选择知识库</option>
+              {knowledgeBases.map((knowledgeBase) => (
+                <option key={knowledgeBase.id} value={knowledgeBase.id}>
+                  {knowledgeBase.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {knowledgeBasesQuery.isLoading ? <p>正在加载知识库。</p> : null}
+          {!knowledgeBasesQuery.isLoading && knowledgeBases.length === 0 ? (
+            <p>暂无知识库，请先在知识库管理中创建。</p>
+          ) : null}
+          {requiresKnowledgeBase && knowledgeBases.length > 0 ? (
+            <p>文档知识库通道需要选择知识库。</p>
+          ) : null}
+        </section>
+      ) : null}
       <div aria-label="聊天记录" className="chat-messages">
         {messages.length === 0 ? (
           <p className="chat-empty">输入问题后，回答会在这里逐段显示。</p>
@@ -148,7 +198,7 @@ export function ChatPage({ knowledgeBase, onBack }: ChatPageProps) {
           问题
           <textarea
             disabled={isStreaming}
-            placeholder="输入需要从当前知识库查询的问题"
+            placeholder="输入需要查询的问题"
             rows={3}
             value={question}
             onChange={(event) => setQuestion(event.target.value)}
@@ -161,6 +211,7 @@ export function ChatPage({ knowledgeBase, onBack }: ChatPageProps) {
             <label>
               回答角色
               <select
+                disabled={isStreaming}
                 value={settings.role}
                 onChange={(event) =>
                   setSettings((current) => ({
@@ -177,6 +228,7 @@ export function ChatPage({ knowledgeBase, onBack }: ChatPageProps) {
             <label>
               粗检索数量
               <input
+                disabled={isStreaming}
                 min="1"
                 type="number"
                 value={settings.topK}
@@ -193,6 +245,7 @@ export function ChatPage({ knowledgeBase, onBack }: ChatPageProps) {
             <label>
               重排数量
               <input
+                disabled={isStreaming}
                 max={settings.topK}
                 min="1"
                 type="number"
@@ -208,6 +261,7 @@ export function ChatPage({ knowledgeBase, onBack }: ChatPageProps) {
             <label className="checkbox-label">
               <input
                 checked={settings.useHyde}
+                disabled={isStreaming}
                 type="checkbox"
                 onChange={(event) =>
                   setSettings((current) => ({ ...current, useHyde: event.target.checked }))
@@ -226,7 +280,7 @@ export function ChatPage({ knowledgeBase, onBack }: ChatPageProps) {
   );
 }
 
-/** 将接口错误转换为适合聊天界面展示的中文文案。 */
+/** 将接口错误转换为适合统一聊天界面展示的中文文案。 */
 function getErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     return error.message;

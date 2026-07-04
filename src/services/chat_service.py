@@ -1,4 +1,4 @@
-﻿"""按知识库执行多通道 RAG 问答和基础依赖健康检查。"""
+"""按知识库执行多通道 RAG 问答和基础依赖健康检查。"""
 
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ from src.services.errors import ResourceNotFoundError
 
 async def answer_question(
     *,
-    knowledge_base_id: UUID,
+    knowledge_base_id: UUID | None,
     question: str,
     role: str,
     top_k: int,
@@ -35,14 +35,15 @@ async def answer_question(
     use_hyde: bool,
     channels: list[str] | None = None,
     db: Session,
-    embedding_model: Embeddings,
-    milvus_client: MilvusClient,
+    embedding_model: Embeddings | None,
+    milvus_client: MilvusClient | None,
     llm: BaseChatModel,
 ) -> ChatResponse:
     """校验知识库后执行指定通道的单通道或多通道完整问答。"""
-    _ensure_knowledge_base_exists(db, knowledge_base_id)
+    selected_channels = channels or ["document"]
+    _ensure_document_channel_knowledge_base(db, knowledge_base_id, selected_channels)
     evidence = await collect_evidence(
-        channels or ["document"],
+        selected_channels,
         knowledge_base_id=knowledge_base_id,
         question=question,
         top_k=top_k,
@@ -67,7 +68,7 @@ async def answer_question(
 
 async def stream_answer(
     *,
-    knowledge_base_id: UUID,
+    knowledge_base_id: UUID | None,
     question: str,
     role: str,
     top_k: int,
@@ -75,14 +76,15 @@ async def stream_answer(
     use_hyde: bool,
     channels: list[str] | None = None,
     db: Session,
-    embedding_model: Embeddings,
-    milvus_client: MilvusClient,
+    embedding_model: Embeddings | None,
+    milvus_client: MilvusClient | None,
     llm: BaseChatModel,
 ) -> AsyncIterator[str]:
     """按模型生成顺序流式返回指定通道的 RAG 回答文本。"""
-    _ensure_knowledge_base_exists(db, knowledge_base_id)
+    selected_channels = channels or ["document"]
+    _ensure_document_channel_knowledge_base(db, knowledge_base_id, selected_channels)
     evidence = await collect_evidence(
-        channels or ["document"],
+        selected_channels,
         knowledge_base_id=knowledge_base_id,
         question=question,
         top_k=top_k,
@@ -107,7 +109,7 @@ async def stream_answer(
 def check_health(
     db: Session,
     storage: ObjectStorage,
-    milvus_client: MilvusClient,
+    milvus_client: MilvusClient | None,
 ) -> bool:
     """检查 PostgreSQL、MinIO bucket 和 Milvus 的基础连通性。"""
     try:
@@ -120,14 +122,22 @@ def check_health(
         return False
 
 
-def _ensure_knowledge_base_exists(db: Session, knowledge_base_id: UUID) -> None:
-    """校验指定知识库存在，避免多个通道分别重复校验。"""
+def _ensure_document_channel_knowledge_base(
+    db: Session,
+    knowledge_base_id: UUID | None,
+    channels: list[str],
+) -> None:
+    """仅在 document 通道被选择时校验知识库 ID 和资源存在性。"""
+    if "document" not in channels:
+        return
+    if knowledge_base_id is None:
+        raise ValueError("document 通道需要知识库 ID")
+
     exists = db.execute(
         select(KnowledgeBase.id).where(KnowledgeBase.id == knowledge_base_id)
     ).scalar_one_or_none()
     if exists is None:
         raise ResourceNotFoundError("知识库不存在")
-
 
 def _document_sources(evidence: list[ChannelEvidence]) -> list[ChatSource]:
     """仅从 document 通道还原旧接口兼容的来源字段。"""

@@ -1,5 +1,6 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+﻿import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, expect, test, vi } from 'vitest';
 import App from '../App';
 
@@ -42,10 +43,26 @@ test('后端健康时显示服务可用', async () => {
   expect(await screen.findByText('服务可用')).toBeInTheDocument();
 });
 
-test('没有知识库选择时引导用户创建或选择知识库', () => {
+test('知识库管理页不再展示聊天入口', () => {
   renderApp();
 
   expect(screen.getByText('请选择知识库后管理文档。')).toBeInTheDocument();
-  expect(screen.getByText('请选择知识库后进入聊天。')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: '进入聊天' })).toBeDisabled();
+  expect(screen.queryByRole('button', { name: '进入聊天' })).not.toBeInTheDocument();
+});
+
+test('顶层导航在知识库管理和统一智能问答之间切换', async () => {
+  const user = userEvent.setup();
+  renderApp();
+
+  await user.click(screen.getByRole('button', { name: '智能问答' }));
+
+  expect(screen.getByRole('heading', { name: '统一智能问答' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '智能问答' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+
+  await user.click(screen.getByRole('button', { name: '知识库管理' }));
+
+  expect(screen.getByText('请选择知识库后管理文档。')).toBeInTheDocument();
 });

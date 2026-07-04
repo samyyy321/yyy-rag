@@ -86,7 +86,7 @@ class DocumentUploadResponse(BaseModel):
 class ChatRequest(BaseModel):
     """按知识库执行 RAG 问答的请求。"""
 
-    knowledge_base_id: UUID
+    knowledge_base_id: UUID | None = None
     question: str = Field(min_length=1)
     role: str = "patient"
     top_k: int = Field(default=20, gt=0)
@@ -105,6 +105,8 @@ class ChatRequest(BaseModel):
             raise ValueError("rerank_top_k 不能大于 top_k")
         if len(set(self.channels)) != len(self.channels):
             raise ValueError("channels 不能包含重复通道")
+        if "document" in self.channels and self.knowledge_base_id is None:
+            raise ValueError("document 通道需要 knowledge_base_id")
         return self
 
 

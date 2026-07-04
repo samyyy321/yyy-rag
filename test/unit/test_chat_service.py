@@ -1,4 +1,4 @@
-﻿from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock, Mock
 from uuid import uuid4
 
 import pytest
@@ -107,3 +107,32 @@ def test_check_health_returns_false_when_dependency_fails():
     db.execute.side_effect = RuntimeError("database unavailable")
 
     assert check_health(db, Mock(), Mock()) is False
+@pytest.mark.asyncio
+async def test_answer_question_skips_knowledge_base_lookup_for_graph_only(monkeypatch):
+    """纯图谱问答不应访问文档知识库表。"""
+    db = Mock()
+    collect = AsyncMock(
+        return_value=[ChannelEvidence(channel="graph", content="图谱证据")]
+    )
+    generate = AsyncMock(return_value="图谱回答")
+    monkeypatch.setattr("src.services.chat_service.collect_evidence", collect)
+    monkeypatch.setattr("src.services.chat_service.generate_channel_answer", generate)
+
+    response = await answer_question(
+        knowledge_base_id=None,
+        question="图谱问题",
+        role="patient",
+        top_k=20,
+        rerank_top_k=5,
+        use_hyde=True,
+        channels=["graph"],
+        db=db,
+        embedding_model=None,
+        milvus_client=None,
+        llm=Mock(),
+    )
+
+    assert response.answer == "图谱回答"
+    assert response.sources == []
+    db.execute.assert_not_called()
+    assert collect.await_args.kwargs["knowledge_base_id"] is None

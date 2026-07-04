@@ -1,4 +1,4 @@
-﻿"""单通道检索与 asyncio.gather 多通道融合编排。"""
+"""单通道检索与 asyncio.gather 多通道融合编排。"""
 
 from __future__ import annotations
 
@@ -26,16 +26,20 @@ from src.query.sql_rag import retrieve_sql_evidence
 
 async def retrieve_document_evidence(
     *,
-    knowledge_base_id: UUID,
+    knowledge_base_id: UUID | None,
     question: str,
     top_k: int,
     rerank_top_k: int,
     use_hyde: bool,
-    embedding_model: Embeddings,
-    milvus_client: MilvusClient,
+    embedding_model: Embeddings | None,
+    milvus_client: MilvusClient | None,
     llm: BaseChatModel,
 ) -> ChannelEvidence | None:
     """复用现有 Milvus 文档检索，转为文档通道证据。"""
+    if knowledge_base_id is None:
+        raise ValueError("document 通道需要知识库 ID")
+    if embedding_model is None or milvus_client is None:
+        raise ValueError("document 通道需要 Milvus 和 Embedding 依赖")
     hits = await search_docs_raw(
         question=question,
         embedding_model=embedding_model,
@@ -58,14 +62,14 @@ async def retrieve_document_evidence(
 async def collect_evidence(
     channels: list[str],
     *,
-    knowledge_base_id: UUID,
+    knowledge_base_id: UUID | None,
     question: str,
     top_k: int,
     rerank_top_k: int,
     use_hyde: bool,
     db: Session,
-    embedding_model: Embeddings,
-    milvus_client: MilvusClient,
+    embedding_model: Embeddings | None,
+    milvus_client: MilvusClient | None,
     llm: BaseChatModel,
 ) -> list[ChannelEvidence]:
     """按请求指定的通道收集证据；多通道时并行且容忍单通道失败。"""
@@ -158,14 +162,14 @@ def build_answer_prompt(
 async def _retrieve_channel(
     channel: str,
     *,
-    knowledge_base_id: UUID,
+    knowledge_base_id: UUID | None,
     question: str,
     top_k: int,
     rerank_top_k: int,
     use_hyde: bool,
     db: Session,
-    embedding_model: Embeddings,
-    milvus_client: MilvusClient,
+    embedding_model: Embeddings | None,
+    milvus_client: MilvusClient | None,
     llm: BaseChatModel,
 ) -> ChannelEvidence | None:
     """分发到一个已由请求模型校验过的检索通道。"""

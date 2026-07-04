@@ -1,4 +1,6 @@
-﻿from src.api.main import app
+from unittest.mock import Mock
+
+from src.api.main import app
 
 
 def _route_paths(routes, prefix=""):
@@ -25,3 +27,25 @@ def test_api_exposes_required_paths():
     assert "/api/v1/chat" in paths
     assert "/api/v1/chat/stream" in paths
     assert "/api/v1/health" in paths
+
+def test_document_dependencies_load_only_when_document_channel_is_selected(monkeypatch):
+    """图谱和 SQL-only 请求不应创建 Milvus 或 Embedding 客户端。"""
+    from src.api.routes import chat as chat_routes
+
+    embedding = object()
+    milvus = object()
+    get_embedding = Mock(return_value=embedding)
+    get_milvus = Mock(return_value=milvus)
+    monkeypatch.setattr(chat_routes, "get_embedding", get_embedding)
+    monkeypatch.setattr(chat_routes, "get_milvus", get_milvus)
+
+    assert chat_routes._get_document_dependencies(["graph", "sql"]) == (None, None)
+    get_embedding.assert_not_called()
+    get_milvus.assert_not_called()
+
+    assert chat_routes._get_document_dependencies(["document", "graph"]) == (
+        embedding,
+        milvus,
+    )
+    get_embedding.assert_called_once()
+    get_milvus.assert_called_once()

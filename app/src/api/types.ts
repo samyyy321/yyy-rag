@@ -52,9 +52,13 @@ export type DocumentUploadResponse = {
   status: 'pending';
 };
 
-/** 问答请求参数。 */
+/** 后端支持的显式检索通道。 */
+export type RetrievalChannel = 'document' | 'graph' | 'sql';
+
+/** 问答请求参数。document 通道被选择时才携带 knowledge_base_id。 */
 export type ChatRequest = {
-  knowledge_base_id: string;
+  knowledge_base_id?: string;
+  channels: RetrievalChannel[];
   question: string;
   role: string;
   top_k: number;

@@ -1,10 +1,10 @@
-"""Chat RAG 问答与流式问答路由。"""
+﻿"""Chat RAG 问答与流式问答路由。"""
 
 from __future__ import annotations
 
 import json
 from collections.abc import AsyncIterator
-from uuid import UUID
+from typing import cast
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
@@ -13,7 +13,12 @@ from langchain_core.language_models import BaseChatModel
 from pymilvus import MilvusClient
 from sqlalchemy.orm import Session
 
-from src.api.dependencies import get_chat_model, get_database, get_embedding, get_milvus
+from src.api.dependencies import (
+    get_chat_model,
+    get_database,
+    get_embedding,
+    get_milvus,
+)
 from src.api.schemas import ChatRequest, ChatResponse
 from src.services.chat_service import answer_question, stream_answer
 
@@ -24,11 +29,10 @@ router = APIRouter(prefix="/api/v1", tags=["chat"])
 async def chat(
     payload: ChatRequest,
     db: Session = Depends(get_database),
-    embedding_model: Embeddings = Depends(get_embedding),
-    milvus_client: MilvusClient = Depends(get_milvus),
     llm: BaseChatModel = Depends(get_chat_model),
 ) -> ChatResponse:
-    """在指定知识库范围内执行非流式 RAG 问答。"""
+    """按请求通道执行非流式问答，仅 document 通道加载文档基础依赖。"""
+    embedding_model, milvus_client = _get_document_dependencies(payload.channels)
     return await answer_question(
         knowledge_base_id=payload.knowledge_base_id,
         question=payload.question,
@@ -48,11 +52,10 @@ async def chat(
 async def chat_stream(
     payload: ChatRequest,
     db: Session = Depends(get_database),
-    embedding_model: Embeddings = Depends(get_embedding),
-    milvus_client: MilvusClient = Depends(get_milvus),
     llm: BaseChatModel = Depends(get_chat_model),
 ) -> StreamingResponse:
-    """以 Server-Sent Events 流式返回指定知识库的 RAG 回答。"""
+    """以 Server-Sent Events 流式返回指定通道的 RAG 回答。"""
+    embedding_model, milvus_client = _get_document_dependencies(payload.channels)
 
     async def event_stream() -> AsyncIterator[str]:
         async for content in stream_answer(
@@ -62,7 +65,7 @@ async def chat_stream(
             top_k=payload.top_k,
             rerank_top_k=payload.rerank_top_k,
             use_hyde=payload.use_hyde,
-        channels=payload.channels,
+            channels=payload.channels,
             db=db,
             embedding_model=embedding_model,
             milvus_client=milvus_client,
@@ -76,3 +79,12 @@ async def chat_stream(
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache"},
     )
+
+
+def _get_document_dependencies(
+    channels: list[str],
+) -> tuple[Embeddings | None, MilvusClient | None]:
+    """仅在 document 通道被选择时创建 Embedding 与 Milvus 客户端。"""
+    if "document" not in channels:
+        return None, None
+    return cast(Embeddings, get_embedding()), cast(MilvusClient, get_milvus())

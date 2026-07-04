@@ -9,8 +9,8 @@ import {
   updateKnowledgeBase,
 } from './api/knowledgeBases';
 import type { KnowledgeBase } from './api/types';
-import { AppShell } from './components/AppShell';
-import { ChatEntryPanel, ChatPage } from './components/ChatPage';
+import { AppShell, type AppView } from './components/AppShell';
+import { ChatPage } from './components/ChatPage';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { DocumentPanel } from './components/DocumentPanel';
 import { KnowledgeBaseDialog } from './components/KnowledgeBaseDialog';
@@ -19,13 +19,13 @@ import './styles/global.css';
 
 type DialogMode = 'create' | 'edit' | null;
 
-/** 管理知识库工作台、当前知识库和独立聊天界面切换。 */
+/** 管理知识库管理和统一智能问答两个顶层视图。 */
 export default function App() {
   const queryClient = useQueryClient();
+  const [activeView, setActiveView] = useState<AppView>('workspace');
   const [selectedKnowledgeBaseId, setSelectedKnowledgeBaseId] = useState<string | null>(null);
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [isChatOpen, setIsChatOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const knowledgeBasesQuery = useQuery({
@@ -77,7 +77,6 @@ export default function App() {
     onSuccess: (_, deletedId) => {
       if (selectedKnowledgeBaseId === deletedId) {
         setSelectedKnowledgeBaseId(null);
-        setIsChatOpen(false);
       }
       setIsDeleteOpen(false);
       void refreshKnowledgeBases();
@@ -94,7 +93,7 @@ export default function App() {
     createMutation.mutate(value);
   };
 
-  const sidebar = isChatOpen ? null : (
+  const sidebar = activeView === 'workspace' ? (
     <KnowledgeBaseSidebar
       isLoading={knowledgeBasesQuery.isLoading}
       items={knowledgeBases}
@@ -106,65 +105,65 @@ export default function App() {
       }}
       onSelect={(knowledgeBase) => {
         setErrorMessage(null);
-        setIsChatOpen(false);
         setSelectedKnowledgeBaseId(knowledgeBase.id);
       }}
     />
-  );
+  ) : null;
 
+  const workspaceContent = (
+    <>
+      {errorMessage ? (
+        <div className="notice notice-error" role="alert">
+          {errorMessage}
+        </div>
+      ) : null}
+
+      {selectedKnowledgeBase ? (
+        <section className="workspace-summary">
+          <div>
+            <p className="section-kicker">当前知识库</p>
+            <h2>{selectedKnowledgeBase.name}</h2>
+            <p>{selectedKnowledgeBase.description || '未填写知识库描述。'}</p>
+          </div>
+          <div className="summary-actions">
+            <button className="button button-secondary" type="button" onClick={() => setDialogMode('edit')}>
+              编辑
+            </button>
+            <button className="button button-danger" type="button" onClick={() => setIsDeleteOpen(true)}>
+              删除知识库
+            </button>
+          </div>
+        </section>
+      ) : (
+        <section className="empty-workspace">
+          <h2>从知识库开始</h2>
+          <p>选择左侧知识库，或创建一个知识库后上传和管理文档。</p>
+          <button className="button button-primary" type="button" onClick={() => setDialogMode('create')}>
+            新建知识库
+          </button>
+        </section>
+      )}
+
+      <div className="workspace-panels">
+        <DocumentPanel knowledgeBase={selectedKnowledgeBase} />
+      </div>
+    </>
+  );
   return (
     <AppShell
+      activeView={activeView}
       healthStatus={healthStatus}
-      isChatView={isChatOpen}
       sidebar={sidebar}
       onRefreshHealth={() => {
         void healthQuery.refetch();
       }}
+      onViewChange={setActiveView}
     >
-      {isChatOpen && selectedKnowledgeBase ? (
-        <ChatPage knowledgeBase={selectedKnowledgeBase} onBack={() => setIsChatOpen(false)} />
+      {activeView === 'workspace' ? (
+        workspaceContent
       ) : (
-        <>
-          {errorMessage ? (
-            <div className="notice notice-error" role="alert">
-              {errorMessage}
-            </div>
-          ) : null}
+        <ChatPage />
 
-          {selectedKnowledgeBase ? (
-            <section className="workspace-summary">
-              <div>
-                <p className="section-kicker">当前知识库</p>
-                <h2>{selectedKnowledgeBase.name}</h2>
-                <p>{selectedKnowledgeBase.description || '未填写知识库描述。'}</p>
-              </div>
-              <div className="summary-actions">
-                <button className="button button-secondary" type="button" onClick={() => setDialogMode('edit')}>
-                  编辑
-                </button>
-                <button className="button button-danger" type="button" onClick={() => setIsDeleteOpen(true)}>
-                  删除知识库
-                </button>
-              </div>
-            </section>
-          ) : (
-            <section className="empty-workspace">
-              <h2>从知识库开始</h2>
-              <p>选择左侧知识库，或创建一个知识库后上传文档并开始问答。</p>
-              <button className="button button-primary" type="button" onClick={() => setDialogMode('create')}>
-                新建知识库
-              </button>
-            </section>
-          )}
-
-          <div className="workspace-panels">
-            <DocumentPanel knowledgeBase={selectedKnowledgeBase} />
-            <ChatEntryPanel
-              knowledgeBase={selectedKnowledgeBase}
-              onOpen={() => setIsChatOpen(true)}
-            />
-          </div>
-        </>
       )}
 
       <KnowledgeBaseDialog
