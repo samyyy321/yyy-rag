@@ -83,3 +83,5 @@ Thumbs.db
 # Script runtime logs and optional local demo-data overrides
 /scripts/.run-logs/
 /scripts/data/local/
+/scripts/data/*.generated.json
+/scripts/data/*.local.json

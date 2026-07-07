@@ -93,3 +93,44 @@ test('文档和图谱通道发送已选知识库与两个通道', async () => {
     expect.any(Function),
   );
 });
+test('流式回答中的 Markdown 加粗标记渲染为 strong 元素', async () => {
+  api.streamQuestion.mockImplementation(
+    async (_payload: unknown, onToken: (token: string) => void) => {
+      onToken('当前共有 **2 个商品**。');
+    },
+  );
+  const user = userEvent.setup();
+  renderChatPage();
+
+  await user.click(screen.getByRole('checkbox', { name: '医学知识图谱' }));
+  await user.click(screen.getByRole('checkbox', { name: '文档知识库' }));
+  await user.type(screen.getByLabelText('问题'), '商品数量');
+  await user.click(screen.getByRole('button', { name: '发送' }));
+
+  expect(await screen.findByText('2 个商品', { selector: 'strong' })).toBeInTheDocument();
+});
+
+test('未选择文档知识库时仍可调整高级检索设置', async () => {
+  const user = userEvent.setup();
+  renderChatPage();
+
+  await user.click(screen.getByRole('checkbox', { name: '医学知识图谱' }));
+  await user.click(screen.getByRole('checkbox', { name: '文档知识库' }));
+  await user.click(screen.getByText('高级检索设置'));
+  await user.selectOptions(screen.getByRole('combobox', { name: '回答角色' }), 'doctor');
+
+  expect(screen.getByRole('combobox', { name: '回答角色' })).toHaveValue('doctor');
+});
+test('纯图谱或运营数据库通道隐藏文档检索高级参数', async () => {
+  const user = userEvent.setup();
+  renderChatPage();
+
+  await user.click(screen.getByRole('checkbox', { name: '医学知识图谱' }));
+  await user.click(screen.getByRole('checkbox', { name: '文档知识库' }));
+  await user.click(screen.getByText('高级检索设置'));
+
+  expect(screen.getByRole('combobox', { name: '回答角色' })).toBeInTheDocument();
+  expect(screen.queryByLabelText('粗检索数量')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('重排数量')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('使用 HyDE 提升召回')).not.toBeInTheDocument();
+});

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ApiError } from '../api/client';
 import { streamQuestion } from '../api/chat';
@@ -179,7 +179,7 @@ export function ChatPage() {
           messages.map((message) => (
             <article className={`chat-message chat-message-${message.role}`} key={message.id}>
               <strong>{message.role === 'user' ? '你' : '助手'}</strong>
-              <p>{message.content || '正在生成…'}</p>
+              <p>{renderInlineMarkdown(message.content || '正在生成…')}</p>
             </article>
           ))
         )}
@@ -225,50 +225,54 @@ export function ChatPage() {
                 <option value="pharmacist">药师</option>
               </select>
             </label>
-            <label>
-              粗检索数量
-              <input
-                disabled={isStreaming}
-                min="1"
-                type="number"
-                value={settings.topK}
-                onChange={(event) => {
-                  const topK = Number(event.target.value) || 1;
-                  setSettings((current) => ({
-                    ...current,
-                    topK,
-                    rerankTopK: Math.min(current.rerankTopK, topK),
-                  }));
-                }}
-              />
-            </label>
-            <label>
-              重排数量
-              <input
-                disabled={isStreaming}
-                max={settings.topK}
-                min="1"
-                type="number"
-                value={settings.rerankTopK}
-                onChange={(event) =>
-                  setSettings((current) => ({
-                    ...current,
-                    rerankTopK: Math.min(Number(event.target.value) || 1, current.topK),
-                  }))
-                }
-              />
-            </label>
-            <label className="checkbox-label">
-              <input
-                checked={settings.useHyde}
-                disabled={isStreaming}
-                type="checkbox"
-                onChange={(event) =>
-                  setSettings((current) => ({ ...current, useHyde: event.target.checked }))
-                }
-              />
-              使用 HyDE 提升召回
-            </label>
+            {documentSelected ? (
+              <>
+                <label>
+                  粗检索数量
+                  <input
+                    disabled={isStreaming}
+                    min="1"
+                    type="number"
+                    value={settings.topK}
+                    onChange={(event) => {
+                      const topK = Number(event.target.value) || 1;
+                      setSettings((current) => ({
+                        ...current,
+                        topK,
+                        rerankTopK: Math.min(current.rerankTopK, topK),
+                      }));
+                    }}
+                  />
+                </label>
+                <label>
+                  重排数量
+                  <input
+                    disabled={isStreaming}
+                    max={settings.topK}
+                    min="1"
+                    type="number"
+                    value={settings.rerankTopK}
+                    onChange={(event) =>
+                      setSettings((current) => ({
+                        ...current,
+                        rerankTopK: Math.min(Number(event.target.value) || 1, current.topK),
+                      }))
+                    }
+                  />
+                </label>
+                <label className="checkbox-label">
+                  <input
+                    checked={settings.useHyde}
+                    disabled={isStreaming}
+                    type="checkbox"
+                    onChange={(event) =>
+                      setSettings((current) => ({ ...current, useHyde: event.target.checked }))
+                    }
+                  />
+                  使用 HyDE 提升召回
+                </label>
+              </>
+            ) : null}
           </div>
         </details>
 
@@ -280,7 +284,19 @@ export function ChatPage() {
   );
 }
 
-/** 将接口错误转换为适合统一聊天界面展示的中文文案。 */
+
+/** 仅解析回答中的 Markdown 加粗标记，避免将模型文本作为 HTML 注入页面。 */
+function renderInlineMarkdown(content: string): ReactNode[] {
+  return content
+    .split(/(\*\*[^*]+\*\*)/g)
+    .filter((part) => part.length > 0)
+    .map((part, index) => {
+      if (part.startsWith("**") && part.endsWith("**")) {
+        return <strong key={index}>{part.slice(2, -2)}</strong>;
+      }
+      return part;
+    });
+}/** 将接口错误转换为适合统一聊天界面展示的中文文案。 */
 function getErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     return error.message;
