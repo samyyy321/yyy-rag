@@ -1,4 +1,4 @@
-﻿"""文档上传、查询和删除路由。"""
+"""文档上传、查询和删除路由。"""
 
 from io import BytesIO
 from pathlib import Path
@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from src.api.dependencies import get_database, get_milvus, get_storage
 from src.api.schemas import (
+    ChunkStrategy,
     DocumentListResponse,
     DocumentResponse,
     DocumentUploadResponse,
@@ -31,6 +32,7 @@ def _document_response(document, task=None) -> DocumentResponse:
         "file_size": document.file_size,
         "doc_type": document.doc_type,
         "category": document.category,
+        "chunk_strategy": document.chunk_strategy,
         "status": document.status,
         "chunk_count": document.chunk_count,
         "error_message": document.error_message,
@@ -58,6 +60,7 @@ async def upload_document(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     category: str = Form(default="default"),
+    chunk_strategy: ChunkStrategy = Form(default="recursive"),
     db: Session = Depends(get_database),
     storage: ObjectStorage = Depends(get_storage),
 ) -> DocumentUploadResponse:
@@ -78,6 +81,7 @@ async def upload_document(
         file_size=len(content),
         doc_type=suffix,
         category=category,
+        chunk_strategy=chunk_strategy,
         fileobj=BytesIO(content),
     )
     background_tasks.add_task(document_service.run_ingestion_task, task.id)

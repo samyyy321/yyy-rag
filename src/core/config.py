@@ -43,6 +43,9 @@ class Config:
     NEO4J_DATABASE: str = os.getenv("NEO4J_DATABASE", "neo4j")
     CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "512"))
     CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "64"))
+    SEMANTIC_SIMILARITY_THRESHOLD = float(
+        os.getenv("SEMANTIC_SIMILARITY_THRESHOLD", "0.65")
+    )
     TOP_K = int(os.getenv("TOP_K", "10"))
     RERANK_TOP_N = int(os.getenv("RERANK_TOP_N", "5"))
 

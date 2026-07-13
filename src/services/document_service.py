@@ -1,4 +1,4 @@
-﻿"""文档元数据、异步导入任务和外部存储清理服务。"""
+"""文档元数据、异步导入任务和外部存储清理服务。"""
 
 from __future__ import annotations
 
@@ -42,6 +42,7 @@ def create_document(
     doc_type: str,
     category: str,
     fileobj: BinaryIO,
+    chunk_strategy: str = "recursive",
 ) -> tuple[Document, IngestionTask]:
     """上传原始文件并在同一业务事务内创建 pending 文档和导入任务。"""
     document_id = uuid4()
@@ -63,6 +64,7 @@ def create_document(
             file_size=file_size,
             doc_type=doc_type,
             category=category,
+            chunk_strategy=chunk_strategy,
             status="pending",
             chunk_count=0,
             error_message=None,
@@ -299,6 +301,7 @@ def run_ingestion_task(task_id: UUID) -> None:
                     doc_name=document.original_name,
                     doc_type=document.doc_type,
                     category=document.category,
+                    chunk_strategy=document.chunk_strategy,
                     embedding_model=get_embedding_model(),
                     milvus_client=milvus_client,
                 )

@@ -13,9 +13,10 @@ def test_business_tables_have_comments_and_expected_columns():
     assert IngestionTask.__table__.comment == "文档导入任务表"
     assert set(Document.__table__.columns.keys()) == {
         "id", "knowledge_base_id", "original_name", "object_key",
-        "content_type", "file_size", "doc_type", "category", "status",
-        "chunk_count", "error_message", "created_at", "updated_at",
+        "content_type", "file_size", "doc_type", "category", "chunk_strategy",
+        "status", "chunk_count", "error_message", "created_at", "updated_at",
     }
+    assert Document.__table__.columns["chunk_strategy"].comment == "文档导入时使用的文本切分策略"
     assert all(
         column.comment
         for table in Base.metadata.sorted_tables

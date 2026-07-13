@@ -5,7 +5,7 @@ YYY-RAG 是一个支持文档 RAG、GraphRAG、NL2SQL 和多通道融合的知�
 ## 主要能力
 
 - 知识库创建、查询、更新、删除与分页；
-- PDF、DOCX、TXT、Markdown 文档上传、异步导入和状态跟踪；
+- PDF、DOCX、TXT、Markdown 文档上传、用户可选切分策略、异步导入和状态跟踪；
 - MinerU / LlamaIndex 文档解析、Embedding、Milvus 检索与重排；
 - `document` 文档知识库、`graph` 医学知识图谱、`sql` 运营数据库三类检索通道；
 - 单通道回答与 `asyncio.gather()` 多通道并行检索、融合回答；
@@ -154,6 +154,36 @@ npm run dev
 
 在“知识库管理”页面创建知识库、上传文档并等待导入完成。该页面只负责知识库和文档管理，不提供聊天入口。
 
+### 文档切分策略
+
+上传文档时可通过 multipart 字段 `chunk_strategy` 选择切分方式：
+
+| 策略 | 值 | 行为 |
+|---|---|---|
+| 递归切分 | `recursive` | 默认策略，优先按中文段落、换行和句末边界切分，必要时按更细分隔符递归降级 |
+| 滑动窗口 | `sliding_window` | 按固定字符窗口切分，相邻窗口保留系统配置的 overlap |
+| 语义切分 | `semantic` | 基于相邻文本单元 Embedding 相似度形成边界，单个过长单元回退递归切分 |
+
+上传示例：
+
+```text
+file             必填
+category         可选，默认 default
+chunk_strategy   可选，默认 recursive
+```
+
+用户选择策略，不输入任意切分参数。以下参数由后端环境变量统一管理：
+
+```env
+CHUNK_SIZE=512
+CHUNK_OVERLAP=64
+SEMANTIC_SIMILARITY_THRESHOLD=0.65
+```
+
+策略会持久化在文档的 `chunk_strategy` 字段中，后台导入任务按该值执行。调整环境参数或策略只影响之后新导入的文档；已有文档不会自动重新切分或重建向量。
+
+语义切分会额外调用一次 Embedding 计算候选单元的相邻相似度，因此导入速度更慢，且可能增加 Embedding 调用成本。
+
 ### 统一智能问答
 
 在“智能问答”页面选择一个或多个通道：
@@ -212,7 +242,7 @@ npm run dev
 使用 Conda `yyy-rag` 环境执行：
 
 ```powershell
-conda run --no-capture-output -n yyy-rag python -m pytest test/unit/test_multi_channel_schema.py test/unit/test_query_safety.py test/unit/test_graph_rag.py test/unit/test_sql_rag.py test/unit/test_multi_channel.py test/unit/test_chat_service.py test/unit/test_init_scripts.py test/integration/test_api_routes.py -q -p no:cacheprovider
+conda run --no-capture-output -n yyy-rag python -m pytest test/unit/test_multi_channel_schema.py test/unit/test_query_safety.py test/unit/test_graph_rag.py test/unit/test_sql_rag.py test/unit/test_multi_channel.py test/unit/test_chat_service.py test/unit/test_init_scripts.py test/unit/test_chunking.py test/unit/test_doc_ingestion.py test/unit/test_document_service.py test/unit/test_api_schemas.py test/unit/test_db_models.py test/integration/test_api_routes.py -q -p no:cacheprovider
 ```
 
 这些测试使用模拟对象验证通道选择、只读安全校验、一次重试、初始化脚本意图和接口契约，不会连接真实 LLM、Neo4j、PostgreSQL 或 Milvus。
@@ -269,6 +299,8 @@ Docker 持久化数据、.env、Python 缓存、测试缓存
 - [统一智能问答任务](docs/task/task_20260915_144454_统一智能问答与通道解耦.md)；
 - [多通道 RAG 设计](docs/spec/spec_20260915_125646_多通道RAG检索与图谱SQL问答.md)；
 - [多通道 RAG 任务](docs/task/task_20260915_125646_多通道RAG检索与图谱SQL问答.md)；
+- [文档切分策略设计](docs/spec/spec_20260915_202356_文档切分策略可选化.md)；
+- [文档切分策略任务](docs/task/task_20260915_203753_文档切分策略可选化.md)；
 - [RAG 评测说明](RAG-assessment/README.md)。
 
 ## 停止服务

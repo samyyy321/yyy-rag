@@ -1,4 +1,4 @@
-﻿"""生产业务表的 SQLAlchemy 模型定义。
+"""生产业务表的 SQLAlchemy 模型定义。
 
 这里故意不声明 ForeignKey 或 ORM relationship，知识库、文档和导入任务
 之间的关联由服务层在事务中校验和维护。
@@ -87,6 +87,13 @@ class Document(Base):
     )
     category: Mapped[str] = mapped_column(
         String(100), nullable=False, comment="文档分类"
+    )
+    chunk_strategy: Mapped[str] = mapped_column(
+        String(30),
+        nullable=False,
+        default="recursive",
+        server_default=text("'recursive'"),
+        comment="文档导入时使用的文本切分策略",
     )
     status: Mapped[str] = mapped_column(
         String(30), nullable=False, comment="文档导入状态"

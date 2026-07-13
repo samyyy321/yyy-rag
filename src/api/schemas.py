@@ -7,6 +7,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 RetrievalChannel = Literal["document", "graph", "sql"]
+ChunkStrategy = Literal["recursive", "sliding_window", "semantic"]
 
 
 class KnowledgeBaseCreate(BaseModel):
@@ -54,6 +55,7 @@ class DocumentResponse(BaseModel):
     file_size: int
     doc_type: str
     category: str
+    chunk_strategy: ChunkStrategy
     status: str
     chunk_count: int
     error_message: str | None
