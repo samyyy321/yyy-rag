@@ -36,6 +36,7 @@ function renderDocumentPanel() {
 beforeEach(() => {
   vi.clearAllMocks();
   documentsApi.listDocuments.mockResolvedValue({ items: [], total: 0, skip: 0, limit: 20 });
+  documentsApi.getDocument.mockResolvedValue({ id: 'document-2', status: 'pending' });
 });
 
 test('选择支持文件后显示上传操作', async () => {
@@ -63,6 +64,7 @@ test('删除文档先要求确认', async () => {
         file_size: 20,
         doc_type: 'md',
         category: 'default',
+        chunk_strategy: 'recursive',
         status: 'completed',
         chunk_count: 2,
         error_message: null,
@@ -81,4 +83,27 @@ test('删除文档先要求确认', async () => {
   );
 
   expect(screen.getByRole('dialog', { name: '确认删除文档' })).toBeInTheDocument();
+});
+test('上传时提交用户选择的切分策略', async () => {
+  documentsApi.uploadDocument.mockResolvedValue({
+    document_id: 'document-2',
+    task_id: 'task-2',
+    status: 'pending',
+  });
+  const user = userEvent.setup();
+  renderDocumentPanel();
+
+  await user.upload(
+    screen.getByLabelText('选择文档'),
+    new File(['正文'], '语义文档.md', { type: 'text/markdown' }),
+  );
+  await user.selectOptions(screen.getByLabelText('切分策略'), 'semantic');
+  await user.click(screen.getByRole('button', { name: '上传文档' }));
+
+  expect(documentsApi.uploadDocument).toHaveBeenCalledWith(
+    'knowledge-base-1',
+    expect.any(File),
+    'default',
+    'semantic',
+  );
 });

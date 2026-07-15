@@ -25,6 +25,7 @@ export type DocumentItem = {
   file_size: number;
   doc_type: string;
   category: string;
+  chunk_strategy: ChunkStrategy;
   status: 'pending' | 'processing' | 'completed' | 'failed' | string;
   chunk_count: number;
   error_message: string | null;
@@ -54,6 +55,9 @@ export type DocumentUploadResponse = {
 
 /** 后端支持的显式检索通道。 */
 export type RetrievalChannel = 'document' | 'graph' | 'sql';
+
+/** 文档离线导入支持的文本切分策略。 */
+export type ChunkStrategy = 'recursive' | 'sliding_window' | 'semantic';
 
 /** 问答请求参数。document 通道被选择时才携带 knowledge_base_id。 */
 export type ChatRequest = {

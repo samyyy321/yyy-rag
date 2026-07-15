@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError } from '../api/client';
 import {
@@ -6,7 +6,7 @@ import {
   listDocuments,
   uploadDocument,
 } from '../api/documents';
-import type { DocumentItem, KnowledgeBase } from '../api/types';
+import type { ChunkStrategy, DocumentItem, KnowledgeBase } from '../api/types';
 import { useDocumentStatusTracker } from '../hooks/useDocumentStatusTracker';
 import {
   formatDateTime,
@@ -17,6 +17,12 @@ import { ConfirmDialog } from './ConfirmDialog';
 
 const ACCEPTED_EXTENSIONS = ['pdf', 'docx', 'txt', 'md'];
 
+const CHUNK_STRATEGY_LABELS: Record<ChunkStrategy, string> = {
+  recursive: '递归切分',
+  sliding_window: '滑动窗口切分',
+  semantic: '语义切分',
+};
+
 export type DocumentPanelProps = {
   knowledgeBase: KnowledgeBase | null;
 };
@@ -26,6 +32,7 @@ export function DocumentPanel({ knowledgeBase }: DocumentPanelProps) {
   const queryClient = useQueryClient();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [category, setCategory] = useState('default');
+  const [chunkStrategy, setChunkStrategy] = useState<ChunkStrategy>('recursive');
   const [trackedDocumentId, setTrackedDocumentId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DocumentItem | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -41,8 +48,21 @@ export function DocumentPanel({ knowledgeBase }: DocumentPanelProps) {
   );
 
   const uploadMutation = useMutation({
-    mutationFn: ({ file, documentCategory }: { file: File; documentCategory: string }) =>
-      uploadDocument(knowledgeBase?.id as string, file, documentCategory),
+    mutationFn: ({
+      file,
+      documentCategory,
+      documentChunkStrategy,
+    }: {
+      file: File;
+      documentCategory: string;
+      documentChunkStrategy: ChunkStrategy;
+    }) =>
+      uploadDocument(
+        knowledgeBase?.id as string,
+        file,
+        documentCategory,
+        documentChunkStrategy,
+      ),
     onSuccess: (result) => {
       setSelectedFile(null);
       setTrackedDocumentId(result.document_id);
@@ -96,7 +116,11 @@ export function DocumentPanel({ knowledgeBase }: DocumentPanelProps) {
             return;
           }
           setErrorMessage(null);
-          uploadMutation.mutate({ file: selectedFile, documentCategory: category || 'default' });
+          uploadMutation.mutate({
+            file: selectedFile,
+            documentCategory: category || 'default',
+            documentChunkStrategy: chunkStrategy,
+          });
         }}
       >
         <label className="file-input-label">
@@ -111,6 +135,20 @@ export function DocumentPanel({ knowledgeBase }: DocumentPanelProps) {
         <label>
           文档分类
           <input value={category} onChange={(event) => setCategory(event.target.value)} />
+        </label>
+        <label>
+          切分策略
+          <select
+            aria-label="切分策略"
+            value={chunkStrategy}
+            onChange={(event) => setChunkStrategy(event.target.value as ChunkStrategy)}
+          >
+            {Object.entries(CHUNK_STRATEGY_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
         </label>
         <button className="button button-primary" disabled={!selectedFile || uploadMutation.isPending} type="submit">
           {uploadMutation.isPending ? '正在上传…' : '上传文档'}
@@ -138,7 +176,7 @@ export function DocumentPanel({ knowledgeBase }: DocumentPanelProps) {
           <div>
             <h3>{document.original_name}</h3>
             <p>
-              {document.category} · {formatFileSize(document.file_size)} · {formatDateTime(document.updated_at)}
+              {document.category} · {CHUNK_STRATEGY_LABELS[document.chunk_strategy]} · {formatFileSize(document.file_size)} · {formatDateTime(document.updated_at)}
             </p>
             <span className={`status-tag status-${document.status}`}>
               {getDocumentStatusLabel(document.status)}

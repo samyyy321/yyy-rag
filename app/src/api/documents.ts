@@ -1,8 +1,9 @@
-﻿import { request } from './client';
+import { request } from './client';
 import type {
   DocumentItem,
   DocumentListResponse,
   DocumentUploadResponse,
+  ChunkStrategy,
 } from './types';
 
 /** 查询指定知识库的文档分页列表。 */
@@ -22,10 +23,12 @@ export function uploadDocument(
   knowledgeBaseId: string,
   file: File,
   category: string,
+  chunkStrategy: ChunkStrategy,
 ): Promise<DocumentUploadResponse> {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('category', category);
+  formData.append('chunk_strategy', chunkStrategy);
 
   return request<DocumentUploadResponse>(
     `/api/v1/knowledge-bases/${encodeURIComponent(knowledgeBaseId)}/documents`,

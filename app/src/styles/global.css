@@ -682,3 +682,17 @@ select:focus-visible {
     grid-template-columns: 1fr;
   }
 }
+.upload-form select {
+  width: 100%;
+  padding: 0.55rem;
+  color: #123047;
+  border: 1px solid #aac0ca;
+  border-radius: 0.3rem;
+  background: #fff;
+}
+
+@media (min-width: 768px) {
+  .upload-form {
+    grid-template-columns: minmax(150px, 1fr) minmax(120px, 0.7fr) minmax(150px, 0.9fr) auto;
+  }
+}

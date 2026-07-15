@@ -5,7 +5,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-test('上传文档携带 file 和 category 表单字段', async () => {
+test('上传文档携带 file、category 和 chunk_strategy 表单字段', async () => {
   const fetchMock = vi.fn().mockResolvedValue(
     new Response(
       JSON.stringify({ document_id: 'doc-1', task_id: 'task-1', status: 'pending' }),
@@ -18,6 +18,7 @@ test('上传文档携带 file 和 category 表单字段', async () => {
     'kb-1',
     new File(['内容'], '指南.md', { type: 'text/markdown' }),
     '指南',
+    'semantic',
   );
 
   expect(fetchMock).toHaveBeenCalledWith(
@@ -27,6 +28,7 @@ test('上传文档携带 file 和 category 表单字段', async () => {
   const requestOptions = fetchMock.mock.calls[0][1] as RequestInit;
   const body = requestOptions.body as FormData;
   expect(body.get('category')).toBe('指南');
+  expect(body.get('chunk_strategy')).toBe('semantic');
   expect(body.get('file')).toBeInstanceOf(File);
 });
 
